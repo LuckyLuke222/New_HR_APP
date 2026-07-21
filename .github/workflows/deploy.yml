@@ -15,13 +15,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Debug secret length
-        run: |
-          echo "ARN length: ${#ARN}"
-          echo "First 20 chars: [${ARN:0:20}]"
-          echo "Last 15 chars: [${ARN: -15}]"
-        env:
-          ARN: ${{ secrets.AWS_ROLE_ARN }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
