@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+backup_root="${KUSHHR_ENV_BACKUP_DIR:-$HOME/.kushhr-backups}"
+timestamp="$(date '+%Y%m%d-%H%M%S')"
+dest="$backup_root/$timestamp"
+
+mkdir -p "$dest"
+
+found=0
+for file in .env*; do
+  if [ -f "$file" ]; then
+    found=1
+    cp -p "$file" "$dest/"
+  fi
+done
+
+if [ "$found" -eq 0 ]; then
+  rmdir "$dest" 2>/dev/null || true
+  printf '%s\n' "No .env* files found to back up."
+  exit 0
+fi
+
+printf '%s\n' "Backed up .env* files to $dest"

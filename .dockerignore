@@ -1,0 +1,34 @@
+# Build artifacts & deps (reinstalled/rebuilt inside the image)
+node_modules
+.next
+out
+
+# Self-hosted infra stack (huge; includes runtime volumes — never in the app image)
+infra
+
+# Secrets — runtime env is injected by compose, never baked
+.env*
+
+# VCS / tooling
+.git
+.gitignore
+.gitattributes
+.vscode
+.claude
+
+# Tests & their output (not needed for the production build)
+tests
+playwright
+playwright.config.ts
+playwright-report
+test-results
+
+# Docs & scratch
+docs
+*.md
+Screenshots
+scripts
+
+# Logs
+npm-debug.log*
+yarn-error.log*

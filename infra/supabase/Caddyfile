@@ -1,0 +1,39 @@
+# Caddy — single HTTPS front door for the self-hosted KushHR stack (off-cloud §0, Step 3B).
+#
+# One origin (https://kushhr.internal) terminates TLS with Caddy's *internal* CA (LAN/VPN,
+# no public DNS / Let's Encrypt) and path-routes:
+#   - Supabase API prefixes  -> Kong gateway (kong:8000)
+#   - everything else        -> the Next app (web:3100)
+# This preserves the Option-A single shared URL: browser AND the server-side app use the
+# same https://kushhr.internal, so the @supabase/ssr cookie name (derived from the URL host)
+# is identical on both sides — no pinning, no signed-URL rewrite.
+#
+# Prefixes mirror infra/supabase/volumes/api/kong.yml. The Next app owns /login,
+# /forgot-password, /reset-password, /dashboard, /api/*, etc. — none collide with these.
+#
+# At real on-prem deploy: swap `kushhr.internal` for the site's internal FQDN and distribute
+# this internal CA to clients; the routing is unchanged.
+
+kushhr.internal {
+	tls internal
+
+	# Baseline security headers (HR/payroll app). Set at the single front door so
+	# both the Next app (web) and the Supabase API (kong) responses carry them.
+	# CSP is intentionally deferred to a later, careful pass (see docs/checks/prefork-audit.md).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@supabase path /auth/* /rest/* /storage/* /realtime/* /functions/* /graphql/* /pg/* /.well-known/* /sso/*
+	handle @supabase {
+		reverse_proxy kong:8000
+	}
+
+	handle {
+		reverse_proxy web:3100
+	}
+}

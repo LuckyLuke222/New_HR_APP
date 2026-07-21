@@ -1,0 +1,20 @@
+-- KushHR scaffold conventions.
+--
+-- This migration intentionally creates no application tables.
+-- Phase 1 will add the first auth/profile/company tables.
+--
+-- Rules for every future table migration:
+-- 1. Create the table.
+-- 2. Enable Row Level Security in the same migration:
+--      alter table public.example enable row level security;
+-- 3. Grant explicit privileges (Supabase no longer auto-grants on new tables):
+--      grant select on public.example to authenticated;
+--      grant insert, update, delete on public.example to authenticated;
+--    Never grant to anon — KushHR is authenticated-only.
+--    Only grant to service_role when the table is written exclusively
+--    via the admin client (e.g. audit_logs).
+-- 4. Add explicit policies with `to authenticated` where applicable.
+-- 5. Include `auth.uid() is not null` in user-bound policies.
+-- 6. Add indexes for columns referenced by RLS policies.
+-- 7. Keep highly sensitive payroll/document fields in narrow tables.
+-- 8. Do not use service-role access from browser-reachable code.

@@ -1,0 +1,331 @@
+# KushHR User Flow Inventory And HRMS Comparison Plan
+
+Purpose: build a clear inventory of KushHR's real user flows, then compare them
+against established HRMS products such as Frappe HRMS, BambooHR, and HiBob/Bob.
+
+This document is a work plan only. It should guide the review before any product
+or code changes are made.
+
+Status: **PENDING** — start this after the manual human-flow review in
+`docs/checks/phase-13.md` is complete. After this user-flow comparison, run the
+planned final reviews with multiple AI systems.
+
+---
+
+## Goal
+
+Create a structured workflow comparison matrix that answers:
+
+- What does KushHR currently support?
+- How do mature HRMS products handle the same workflow?
+- Which gaps matter for KushHR v1?
+- Which gaps should become backlog items?
+- Which mature-product behaviors are intentionally out of scope?
+
+---
+
+## Source Material
+
+Use these KushHR files first:
+
+- `docs/checks/phase-13.md`
+- `docs/product-requirements.md`
+- `PROJECT_CONTEXT.md`
+- `docs/systems-thinking.md`
+- `docs/ultrareview-findings.md`
+- `docs/security-review.md`
+- `docs/qa-report.md`
+- `MainProjectSteps.md`
+
+Use tests as the source of "what is actually covered":
+
+- `tests/e2e/admin.spec.ts`
+- `tests/e2e/manager.spec.ts`
+- `tests/e2e/employee.spec.ts`
+- `tests/e2e/rls.spec.ts`
+- `tests/e2e/smoke.spec.ts`
+
+External comparison sources:
+
+- Frappe HRMS docs and GitHub project
+- BambooHR public documentation/help articles
+- HiBob/Bob public documentation/help articles
+- Other open-source HRMS projects only if they have clear workflow docs
+
+---
+
+## Phase 1: Build KushHR Flow Inventory
+
+Objective: document what KushHR currently does before comparing it to anything
+else.
+
+### Task 1.1: Create The Flow Matrix
+
+Create a table with this shape:
+
+| Area | Flow | Actor | Entry Point | Main Steps | Expected Outcome | Data/Audit Evidence | Current Status | Notes |
+|---|---|---|---|---|---|---|---|---|
+| Leave | Submit leave request | Employee | `/leave/new` | Choose type, dates, note, submit | Pending request created | `leave.submitted` audit log | Covered |  |
+
+Current Status values:
+
+- Covered
+- Partially covered
+- Missing
+- Not in v1 scope
+- Needs manual confirmation
+
+### Task 1.2: Extract Admin Flows
+
+Document these flows:
+
+- Admin signs in and reaches dashboard
+- Admin creates employee
+- Admin opens employee profile
+- Admin edits employee/job details
+- Admin manages departments
+- Admin creates/updates leave type
+- Admin sets leave balance
+- Admin approves manager leave
+- Admin uploads employee document
+- Admin updates compensation
+- Admin reviews payroll change requests
+- Admin creates performance cycle
+- Admin creates employee goal
+- Admin submits appraisal for employee in scope
+- Admin views audit logs
+
+### Task 1.3: Extract Manager Flows
+
+Document these flows:
+
+- Manager signs in and reaches dashboard
+- Manager views direct reports
+- Manager opens direct-report profile
+- Manager submits own leave request
+- Manager cancels own pending leave request
+- Manager approves direct-report leave
+- Manager rejects direct-report leave with note
+- Manager assigns onboarding task to direct report
+- Manager creates direct-report goal
+- Manager submits direct-report appraisal
+- Manager is blocked from payroll
+- Manager is blocked from audit logs
+- Manager is blocked from out-of-scope employee actions
+
+### Task 1.4: Extract Employee Flows
+
+Document these flows:
+
+- Employee signs in and reaches dashboard
+- Employee views own profile
+- Employee submits leave request
+- Employee cancels own pending leave request
+- Employee views leave balances
+- Employee uploads own document
+- Employee downloads own document through signed URL
+- Employee completes onboarding task
+- Employee submits payroll change request
+- Employee views own payroll summary
+- Employee views own performance goals/reviews
+- Employee submits self-review
+- Employee acknowledges manager review
+
+### Task 1.5: Extract Negative / Security Flows
+
+Document these flows:
+
+- Employee cannot access `/employees/new`
+- Employee cannot access `/departments`
+- Employee cannot access `/leave/admin`
+- Employee cannot access `/onboarding/admin`
+- Employee cannot access `/audit-logs`
+- Employee cannot upload payslip
+- Employee cannot view another employee's private data
+- Employee cannot edit manager score
+- Manager cannot access payroll
+- Manager cannot access audit logs
+- Manager cannot appraise self
+- Manager cannot appraise outside scope
+- Admin cannot self-appraise
+- Leave approval fails if no matching balance row exists
+- Leave approval fails if balance would go negative
+- Multi-year leave deducts from the correct yearly balances
+- Raw storage URL remains denied
+
+---
+
+## Phase 2: Normalize Flow Details
+
+Objective: make every flow comparable.
+
+For each flow, capture:
+
+- Trigger: what starts the flow?
+- Actor: who performs it?
+- Preconditions: what data must already exist?
+- Steps: what does the user do?
+- Validation: what can block submission?
+- Success state: what changes?
+- Failure state: what message appears?
+- Audit/log evidence: what event is recorded?
+- Notifications: present, missing, or out of scope?
+- Reporting/dashboard effect: what changes visibly?
+- Edge cases: date spans, permissions, missing data, duplicate requests, etc.
+
+Use this detailed template:
+
+| Field | Notes |
+|---|---|
+| Flow name |  |
+| Area |  |
+| Actor |  |
+| Entry point |  |
+| Preconditions |  |
+| User steps |  |
+| Success outcome |  |
+| Failure handling |  |
+| Audit evidence |  |
+| Data owner |  |
+| Permission boundary |  |
+| Edge cases |  |
+| Current gaps |  |
+
+---
+
+## Phase 3: Compare Against Established HRMS Products
+
+Objective: compare KushHR against mature products without blindly copying them.
+
+Start with these products:
+
+1. Frappe HRMS
+2. BambooHR
+3. HiBob/Bob
+
+For each KushHR flow, fill this matrix:
+
+| KushHR Flow | Frappe HRMS Reference | BambooHR Reference | HiBob Reference | Gap / Difference | Decision | Priority |
+|---|---|---|---|---|---|---|
+| Leave request |  |  |  |  |  |  |
+
+Decision values:
+
+- Adopt now
+- Add to backlog
+- Defer
+- Ignore intentionally
+- Already covered
+- Needs more research
+
+Priority values:
+
+- P0: security, data loss, or broken core flow
+- P1: important workflow or policy gap
+- P2: UX/product improvement
+- P3: nice-to-have
+
+---
+
+## Phase 4: Start With High-Value Comparison Areas
+
+Do not compare everything at once. Start with these flows:
+
+### Leave Management
+
+- Leave request
+- Leave cancellation
+- Leave approval/rejection
+- Leave balance management
+- Sick leave vs local leave
+- Cross-year leave
+- Urgent vs normal local leave
+- Missing/insufficient balance handling
+- Who can approve manager leave
+
+### Employee Lifecycle
+
+- Create employee
+- Assign manager
+- Change department/job role
+- View employee profile
+- Termination/inactive status
+- Rehire or reactivation
+
+### Documents
+
+- Employee document upload
+- Admin document upload
+- Payslip visibility
+- Signed download
+- Raw storage denial
+- Document deletion/retention
+
+### Payroll / Compensation
+
+- Admin compensation update
+- Employee payroll change request
+- Bank/tax/national ID handling
+- Approval workflow
+- Sensitive-field masking
+
+### Performance
+
+- Review cycle creation
+- Goal creation
+- Self-review
+- Manager appraisal
+- Acknowledgement
+- Separation of duties
+- Preventing review corruption after acknowledgement
+
+---
+
+## Phase 5: Produce Findings
+
+After comparison, group findings into:
+
+### Must Fix Before Sign-Off
+
+Security, data integrity, broken core flow, or misleading HR state.
+
+### Product Backlog
+
+Useful mature-product behavior that KushHR should eventually support.
+
+### UX Polish
+
+Searchable selects, clearer copy, better empty states, better profile tabs,
+better workflow navigation.
+
+### Explicitly Out Of Scope
+
+Enterprise features not needed in KushHR v1, such as:
+
+- Full payroll engine
+- Tax filings
+- Attendance hardware integrations
+- Shift scheduling
+- Recruitment pipeline
+- Expense management
+- 360 feedback
+- Calibration cycles
+
+---
+
+## Suggested Output Files
+
+Create these later if useful:
+
+- `docs/research/kushhr-flow-inventory.md`
+- `docs/research/hrms-comparison-matrix.md`
+- `docs/research/manual-review-findings.md`
+- `docs/research/product-gap-backlog.md`
+
+---
+
+## Review Rule
+
+Complete KushHR's own flow inventory first. Do not start product comparison until
+the "KushHR Current Flow" column is filled, otherwise the comparison will mix
+implemented behavior, intended behavior, and competitor behavior.

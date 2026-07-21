@@ -1,0 +1,89 @@
+# KushHR Next app + Caddy reverse proxy, layered onto the self-hosted Supabase stack.
+# Run together with the base stack (same project "supabase" -> shared default network):
+#   docker compose -f docker-compose.yml -f docker-compose.app.yml up -d --build
+#
+# URL strategy (Option A): ONE shared origin https://kushhr.internal used by browser AND
+# server. Caddy terminates internal-CA TLS on :443 and path-routes Supabase prefixes to Kong,
+# everything else to the Next app (see Caddyfile). Reachable identically from:
+#   - the host browser via /etc/hosts: `127.0.0.1 kushhr.internal` (+ trust Caddy's CA)
+#   - the web container via extra_hosts host-gateway -> Docker host's published :443 (Caddy),
+#     trusting Caddy's exported root CA via NODE_EXTRA_CA_CERTS.
+# At real on-prem deploy: rebuild with the site's internal FQDN as the build arg, remove the
+# extra_hosts block (real internal DNS resolves both sides), and distribute the CA to clients.
+
+services:
+  web:
+    container_name: kushhr-web
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: https://kushhr.internal
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${ANON_KEY}
+    restart: unless-stopped
+    depends_on:
+      kong:
+        condition: service_healthy
+    # :3100 stays published as a fallback during the rehearsal; proxy-only ingress
+    # (dropping this + Kong's :8000) is a later hardening item.
+    ports:
+      - "3100:3100"
+    environment:
+      # Server-side reads of the same public URL (browser + server share one string).
+      NEXT_PUBLIC_SUPABASE_URL: https://kushhr.internal
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${ANON_KEY}
+      # Secret — runtime only, never baked into the image.
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      # App-originated transactional email (src/server/email.ts) via Resend HTTP API.
+      # Reuse the same Resend key as the GoTrue SMTP_PASS. Optional: blank → emails
+      # degrade to an audited "email.skipped", never failing a Server Action.
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      # Public base URL used to build password-reset/invite links from a configured
+      # origin instead of request headers (host-header-poisoning defence). For this
+      # shared-origin stack, set it to the FQDN Caddy serves. Optional: blank → falls
+      # back to request headers. (Must equal SITE_URL so GoTrue's allowlist accepts it.)
+      APP_URL: ${APP_URL:-}
+      # Trust Caddy's internal CA so server-side fetch() to https://kushhr.internal validates.
+      NODE_EXTRA_CA_CERTS: /certs/root.crt
+    extra_hosts:
+      # Resolve the public FQDN to the Docker host where Caddy publishes :443. Drop at real
+      # on-prem deploy (internal DNS resolves it natively; host-gateway would wrongly pin it).
+      - "kushhr.internal:host-gateway"
+    volumes:
+      # Caddy's exported internal root CA — REQUIRED for `web` to start (missing file aborts
+      # compose). Generated on first Caddy boot; export it once via the "First-boot CA export"
+      # section in backup/README.md before bringing up `web`. Gitignored. Read-only.
+      - ./certs/caddy-root.crt:/certs/root.crt:ro
+    # Probe the public /login route (200, no auth) so a boot failure (missing env / Zod
+    # throw / port clash) surfaces as `unhealthy` rather than a silent restart loop.
+    # busybox wget ships in node:22-alpine (curl does not). Use 127.0.0.1 (not localhost):
+    # the server binds IPv4 0.0.0.0 only, but `localhost` resolves ::1 first → refused.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3100/login || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    container_name: kushhr-caddy
+    image: caddy:2-alpine
+    restart: unless-stopped
+    # No depends_on web: a reverse proxy may start before its upstream (it 502s until web is
+    # up). Decoupling also breaks the bootstrap cycle — web mounts the CA that Caddy generates,
+    # so Caddy must be able to start first. Kong is a hard upstream, so gate on it.
+    depends_on:
+      kong:
+        condition: service_healthy
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:

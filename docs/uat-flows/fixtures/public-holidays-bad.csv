@@ -1,0 +1,6 @@
+date,name,countryCode,tentative
+2028-13-45,Bad date row,MU,false
+2028-05-01,,MU,false
+not-a-date,Missing date format,MU,false
+2028-05-15,Valid Mixed In,MU,false
+2028-05-20,Country too long,MUS,false

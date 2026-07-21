@@ -1,0 +1,23 @@
+name: Deploy to EC2 Docker
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build and Run Container
+    runs-on: self-hosted    # Directs this specific workflow to your EC2 agent
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: sudo docker build -t test-app:latest .
+
+      - name: Stop Old Container
+        run: sudo docker stop test-app-container || true && sudo docker rm test-app-container || true
+
+      - name: Launch New Container
+        # Change 3000:3000 to match your Node.js application's internal port
+        run: sudo docker run -d --name test-app-container -p 3000:3000 test-app:latest

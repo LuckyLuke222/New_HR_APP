@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+
+const fs = require("node:fs");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
+
+const input = fs.readFileSync(0, "utf8");
+let payload = {};
+
+try {
+  payload = input.trim() ? JSON.parse(input) : {};
+} catch {
+  payload = {};
+}
+
+const command = String(payload.tool_input?.command ?? "");
+const normalized = command.replace(/\\\s*\n/g, " ").replace(/\s+/g, " ").trim();
+
+const destructivePatterns = [
+  /\bgit\s+clean\b/,
+  /\bgit\s+switch\s+--orphan\b/,
+  /\bgit\s+reset\s+--hard\b/,
+];
+
+if (!destructivePatterns.some((pattern) => pattern.test(normalized))) {
+  process.exit(0);
+}
+
+const repoRoot = path.resolve(__dirname, "..");
+const backup = spawnSync(path.join(repoRoot, "bin", "backup-env"), {
+  cwd: repoRoot,
+  encoding: "utf8",
+});
+
+const output = `${backup.stdout ?? ""}${backup.stderr ?? ""}`.trim();
+if (output) {
+  console.error(output);
+}
+
+console.error(
+  [
+    "Blocked destructive git command before execution.",
+    "",
+    `Command: ${normalized}`,
+    "",
+    "The .env* files have been backed up. Confirm with the user before rerunning this command.",
+  ].join("\n"),
+);
+
+process.exit(2);

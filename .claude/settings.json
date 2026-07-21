@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/^## Session/{n=NR; last=$0} END{print last}' ./handover.md)",
+      "Bash(awk '/^## 4|^## 4\\\\./{f=1} /^## 5|^## 5\\\\./{f=0} f' ./docs/pending-backlog.md)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(Object.keys\\(p.dependencies||{}\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(grep -vE \"^\\\\s*#|^\\\\s*$\")",
+      "Bash(echo \"=== tsc exit: $? ===\")",
+      "Bash(echo \"=== eslint exit: $? ===\")",
+      "Bash(docker ps *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(lsof -ti:3100)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);for\\(const[k,v]of Object.entries\\(p.scripts||{}\\)\\){if\\(/e2e|playwright|cleanup/.test\\(k\\)\\)console.log\\(k,'=>',v\\)}\")",
+      "Bash(PLAYWRIGHT_BASE_URL=https://kushhr.internal npx playwright test employee.spec.ts manager.spec.ts --workers=1 --reporter=line)",
+      "Bash(PLAYWRIGHT_BASE_URL=https://kushhr.internal npx playwright test employee.spec.ts:636 --workers=1 --reporter=line)",
+      "Bash(node -e \"const n = require\\('./node_modules/next/package.json'\\); console.log\\(n.version\\)\")",
+      "Bash(grep -hE \"^ [a-z].*:$\" docker-compose.yml docker-compose.app.yml)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./bin/claude-bash-guard"
+          }
+        ]
+      }
+    ]
+  }
+}
